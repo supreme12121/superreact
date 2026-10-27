@@ -31,6 +31,16 @@ async def add_super_reaction(channel_id, message_id, emoji):
                 print(f" Failed: HTTP {resp.status}")
                 return False
 
+async def health_check(request):
+    return web.Response(text="Bot is alive")
+
+async def start_web_server():
+    app = web.Application()
+    app.router.add_get('/', health_check)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, '0.0.0.0', int(os.environ.get("PORT", 8080)))
+
 @client.event
 async def on_ready():
     print(f" Auto-super-react bot logged in as {client.user}")
@@ -86,6 +96,9 @@ async def on_message(message):
 
 if __name__ == "__main__":
     # Check if token is set
+
+    asyncio.create_task(start_web_server())
+    
     if TOKEN == "your_discord_token_here":
         print(" Please replace 'your_discord_token_here' with your actual Discord token")
     else:
