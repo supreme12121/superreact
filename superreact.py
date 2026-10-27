@@ -3,6 +3,8 @@ import asyncio
 import aiohttp
 import os
 import urllib.parse
+import aiohttp
+from aiohttp import web
 
 # ========== CONFIGURATION ==========
 TOKEN = os.getenv("TOKEN")
@@ -40,6 +42,8 @@ async def start_web_server():
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', int(os.environ.get("PORT", 8080)))
+    await site.start() # <--- This line was missing
+    print("[+] Web server started for UptimeRobot")
 
 @client.event
 async def on_ready():
@@ -94,12 +98,23 @@ async def on_message(message):
         test_msg = await message.channel.send(" Testing super reaction burst!")
         await add_super_reaction(message.channel.id, test_msg.id, SUPER_EMOJI)
 
-if __name__ == "__main__":
-    # Check if token is set
-
-    asyncio.create_task(start_web_server())
+async def main():
+    # 1. Start the web server inside the running loop
+    await start_web_server()
     
-    if TOKEN == "your_discord_token_here":
-        print(" Please replace 'your_discord_token_here' with your actual Discord token")
+    # 2. Start the discord client using the SAME loop
+    try:
+        await client.start(TOKEN)
+    except discord.LoginFailure:
+        print("Invalid token provided.")
+    except Exception as e:
+        print(f"Error: {e}")
+
+if __name__ == "__main__":
+    if not TOKEN or TOKEN == "your_discord_token_here":
+        print(" Please set your TOKEN environment variable")
     else:
-        client.run(TOKEN)
+        try:
+            asyncio.run(main())
+        except KeyboardInterrupt:
+            print("\nBot shutting down...")
